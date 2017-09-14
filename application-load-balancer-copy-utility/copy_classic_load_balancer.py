@@ -44,6 +44,7 @@ import botocore
 # copy_classic_load_balancer.py
 # --name <value>
 # --region <value>
+# [--prefix <value>]
 # [--profile <value>]
 # [--debug <value>]
 # [--register-targets]
@@ -247,12 +248,12 @@ values because it is reserved for AWS use -- http://docs.aws.amazon.com/AWSEC2/l
 # render a dictionary which contains Application Load Balancer attributes
 
 
-def get_alb_data(elb_data, region, load_balancer_name):
+def get_alb_data(elb_data, region, load_balancer_name, prefix):
     if debug:
         print("building the Application Load Balancer data structure")
     # this is used for building the load balancer spec
     alb_data = {'VpcId': elb_data['LoadBalancerDescriptions'][0]['VPCId'], 'Region': region,
-                'Alb_name': 'alb-' + elb_data['LoadBalancerDescriptions'][0]['LoadBalancerName'],
+                'Alb_name': prefix + elb_data['LoadBalancerDescriptions'][0]['LoadBalancerName'],
                 'Subnets': elb_data['LoadBalancerDescriptions'][0]['Subnets'],
                 'Security_groups': elb_data['LoadBalancerDescriptions'][0]['SecurityGroups'],
                 'Scheme': elb_data['LoadBalancerDescriptions'][0]['Scheme'],
@@ -521,6 +522,8 @@ def main():
     parser.add_argument(
         "--name", help="The name of the Classic load balancer", required=True)
     parser.add_argument(
+        "--prefix", help="String to prepend to ALB name", required=False, default='')
+    parser.add_argument(
         "--profile", help="The credentials profile name to use", required=False, default=None)
     parser.add_argument("--region", help="The region of the Classic load balancer (will also be used for the Application Load Balancer)",
                         required=True)
@@ -537,6 +540,7 @@ with Application Load Balancers, but do not perform create operations",
     args = parser.parse_args()
     load_balancer_name = args.name
     region = args.region
+    prefix = args.prefix
     profile = args.profile
 
     # setting up debugging
@@ -566,7 +570,8 @@ with Application Load Balancers, but do not perform create operations",
                 print(
                     'Your load balancer configuration is supported by this migration utility')
                 sys.exit(0)
-            alb_data = get_alb_data(elb_data, region, load_balancer_name)
+            alb_data = get_alb_data(elb_data, region,
+                load_balancer_name, prefix)
             alb_arn = create_alb(alb_data)
             target_group_arns = create_target_groups(alb_data)
             # print 'alb data', alb_data
