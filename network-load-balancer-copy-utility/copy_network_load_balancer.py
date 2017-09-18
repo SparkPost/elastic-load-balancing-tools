@@ -88,13 +88,14 @@ def nlb_exist(load_balancer_name):
         return True
 
 
-def get_elb_data(elb_name, region):
+def get_elb_data(elb_name, region, profile):
     """
     Describe the Classic Load Balancer and retrieve attributes
     """
     if debug:
         logger.debug("Getting existing Classic Load Balancer data")
-    elbc = boto3.client('elb', region_name=region)
+    session = boto3.Session(profile_name=profile)
+    elbc = session.client('elb', region_name=region)
     # Describes the specified Classic Load Balancer.
     try:
         describe_load_balancers = elbc.describe_load_balancers(
@@ -228,7 +229,7 @@ http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restricti
     return [True, None]
 
 
-def get_nlb_data(elb_data, region, load_balancer_name, perfix, ssl_hc_path):
+def get_nlb_data(elb_data, region, load_balancer_name, prefix, ssl_hc_path):
     """
     Render a dictionary which contains Network Load Balancer attributes
     """
@@ -549,7 +550,7 @@ def main():
             load_balancer_name, region))
         sys.exit(1)
     # Obtain Classic Load Balancer data
-    elb_data = get_elb_data(load_balancer_name, region)
+    elb_data = get_elb_data(load_balancer_name, region, profile)
     # validate known failure scenarios
     if passed_hardfailure_detector(elb_data):
         logger.debug('hardfailure pass')
