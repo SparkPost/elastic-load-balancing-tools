@@ -21,6 +21,8 @@ Usage:
     copy_classic_load_balancer.py
     --name <value>
     --region <value>
+    [--prefix <value>]
+    [--profile <value>]
     [--debug <value>]
     [--register-targets]
     [--dry-run]
@@ -226,7 +228,7 @@ http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Using_Tags.html#tag-restricti
     return [True, None]
 
 
-def get_nlb_data(elb_data, region, load_balancer_name, ssl_hc_path):
+def get_nlb_data(elb_data, region, load_balancer_name, perfix, ssl_hc_path):
     """
     Render a dictionary which contains Network Load Balancer attributes
     """
@@ -234,7 +236,7 @@ def get_nlb_data(elb_data, region, load_balancer_name, ssl_hc_path):
         logger.debug("Building the Network Load Balancer data structure")
     # this is used for building the load balancer spec
     nlb_data = {'VpcId': elb_data['LoadBalancerDescriptions'][0]['VPCId'], 'Region': region,
-                'Nlb_name': elb_data['LoadBalancerDescriptions'][0]['LoadBalancerName'],
+                'Nlb_name': prefix + elb_data['LoadBalancerDescriptions'][0]['LoadBalancerName'],
                 'Subnets': elb_data['LoadBalancerDescriptions'][0]['Subnets'],
                 'Security_groups': elb_data['LoadBalancerDescriptions'][0]['SecurityGroups'],
                 'Scheme': elb_data['LoadBalancerDescriptions'][0]['Scheme'],
@@ -486,6 +488,10 @@ def main():
                     'Classic Load Balancer', usage='%(prog)s --name <elb name> --region')
     parser.add_argument(
         "--name", help="The name of the Classic Load Balancer", required=True)
+    parser.add_argument(
+        "--prefix", help="String to prepend to Network Load Balancer name", required=False, default='')
+    parser.add_argument(
+        "--profile", help="The credentials profile name to use", required=False, default=None)
     parser.add_argument("--region", help="The region of the Classic Load Balancer "
                                          "(will also be used for the Network Load Balancer)",
                         required=True)
@@ -504,15 +510,17 @@ def main():
         parser.exit()
     args = parser.parse_args()
     load_balancer_name = args.name
+    prefix = args.prefix
+    profile = args.profile
     region = args.region
     eipalloc = args.allocationid
     global debug
     debug = args.debug
     global client
-    session = botocore.session.get_session()
+    session = boto3.Session(profile_name=profile)
     session.user_agent_name = 'CopyClassicToNetwork/' + VERSION
-    client = session.create_client('elbv2', region_name=region)
-    ec2_client = session.create_client('ec2', region_name=region)
+    client = session.client('elbv2', region_name=region)
+    ec2_client = session.client('ec2', region_name=region)
 
     # If input gets allocation ID. Verify allocation ID
     if eipalloc is not None:
@@ -550,7 +558,7 @@ def main():
             ssl_hc_path = softfailurecheck_result[1]
             # quit early for dry run operation
             nlb_data = get_nlb_data(
-                elb_data, region, load_balancer_name, ssl_hc_path)
+                elb_data, region, load_balancer_name, prefix, ssl_hc_path)
             if args.dry_run:
                 print ("Your load balancer configuration is supported by this migration utility.")
                 print ("Your can find your Network Load Balancer's meta data in the utility log.")
