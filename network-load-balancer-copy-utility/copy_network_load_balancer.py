@@ -233,6 +233,7 @@ def get_nlb_data(elb_data, region, load_balancer_name, prefix, ssl_hc_path):
     """
     Render a dictionary which contains Network Load Balancer attributes
     """
+    import re
     if debug:
         logger.debug("Building the Network Load Balancer data structure")
     # this is used for building the load balancer spec
@@ -304,6 +305,7 @@ def get_nlb_data(elb_data, region, load_balancer_name, prefix, ssl_hc_path):
         # "-nlb-tg-" and target group port.
         target_group['Name'] = load_balancer_name[: 18] + "-nlb-tg-" + \
             str(listener['TargetGroup_Port'])
+        target_group['Name'] = re.sub('--','-',target_group['Name'])
         # Only append unique Target Group
         if target_group not in nlb_data['target_groups']:
             nlb_data['target_groups'].append(target_group.copy())
